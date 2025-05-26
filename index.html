@@ -236,18 +236,23 @@
         function updateInventory() {
             // List all possible items
             const allItems = [
-                'Shiny Shell', 'Gold Coin', 'Pearl Necklace', 'Mysterious Map', 'Good Luck Charm',
+                'Shiny Shell', 'Sand Dollar', 'Coral Fragment',
+                'Jungle Feather', 'Raptor Claw', 'Exotic Flower',
+                'Naga Scale', 'Basilisk Eye', 'Ancient Coin',
+                'Pirate Doubloon', 'Cursed Pearl', 'Sunken Relic',
+                "Zul'Gurub Idol", 'Temple Gem', 'Spirit Charm',
+                'Gold Coin', 'Pearl Necklace', 'Mysterious Map', 'Good Luck Charm',
                 'Pirate Gold', 'Message in a Bottle', 'Lagoon Map', 'Rare Gemstone', 'Secret Word: Zul',
-                'Magical Conch', 'Ancient Idol', 'Magical Island Treasure', 'Parrot Clue', 'Rare Artifact'
+                'Magical Conch', 'Ancient Idol', 'Magical Island Treasure', 'Parrot Clue', 'Rare Artifact',
+                'Frostmourne', 'Parrot Pet', 'Pirate Hat'
             ];
-            let inventoryList = allItems
-                .map(item => player.inventory.includes(item) ? `<li style='color:#fff;font-weight:bold;font-size:1.08em;text-shadow:2px 2px 6px #000,0 0 10px #000;'>${item}</li>` : null)
-                .filter(Boolean)
-                .join('');
-            if (!inventoryList) inventoryList = '<li style="color:#fff;font-weight:bold;font-size:1.08em;text-shadow:2px 2px 6px #000,0 0 10px #000;">(empty)</li>';
+            // Only show items the player actually has
+            let inventoryList = player.inventory.length
+                ? player.inventory.map(item => `<li style='color:#fff;font-weight:bold;font-size:1.08em;text-shadow:2px 2px 6px #000,0 0 10px #000;'>${item}</li>`).join('')
+                : '<li style="color:#fff;font-weight:bold;font-size:1.08em;text-shadow:2px 2px 6px #000,0 0 10px #000;">(empty)</li>';
             let weaponInfo = `<b style="color:#ffe066;text-shadow:2px 2px 4px #000,0 0 8px #000;">Weapon:</b> <span style="color:#fff176;text-shadow:2px 2px 4px #000,0 0 8px #000;">${playerWeapon.name} (+${playerWeapon.damage} dmg)</span>`;
             let moneyInfo = `<b style="color:#ffd700;text-shadow:2px 2px 4px #000,0 0 8px #000;">Money:</b> <span style="color:#fff;text-shadow:2px 2px 4px #000,0 0 8px #000;">${playerMoney}g</span>`;
-            let potions = playerPotions.length ? playerPotions.map(p => `<span style='color:#b2ff59;text-shadow:2px 2px 4px #000,0 0 8px #000;'>${p.name} (+${p.heal} HP)</span>`).join(', ') : '<span style="color:#fff;text-shadow:2px 2px 4px #000,0 0 8px #000;">(none)</span>';
+            let potions = playerPotions.length ? playerPotions.map(p => `<span style='color:#b2ff59;text-shadow:2px 2px 4px #000,0 0 8px #000;'>${p.name} (+${p.heal ? p.heal : '?'} HP)</span>`).join(', ') : '<span style="color:#fff;text-shadow:2px 2px 4px #000,0 0 8px #000;">(none)</span>';
             let levelInfo = `<b style="color:#40c4ff;text-shadow:2px 2px 4px #000,0 0 8px #000;">Level:</b> <span style="color:#fff;text-shadow:2px 2px 4px #000,0 0 8px #000;">${player.level} (XP: ${player.xp}/${player.xpToNext})</span>`;
             let hpInfo = `<b style="color:#ff5252;text-shadow:2px 2px 4px #000,0 0 8px #000;">HP:</b> <span style="color:#fff;text-shadow:2px 2px 4px #000,0 0 8px #000;">${player.hp}/${player.maxHp}</span>`;
             inventoryDiv.innerHTML = `${moneyInfo}<br>${weaponInfo}<br>${levelInfo}<br><b style="color:#b2ff59;text-shadow:2px 2px 4px #000,0 0 8px #000;">Potions:</b> ${potions}<br>${hpInfo}<br><b style="color:#fff;text-shadow:2px 2px 4px #000,0 0 8px #000;">Inventory:</b><ul>${inventoryList}</ul>`;
