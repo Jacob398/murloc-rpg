@@ -6,7 +6,8 @@
     <title>Murloc's Stranglethorn Adventure</title>
     <style>
         body {
-            background: linear-gradient(to bottom, #e0ffe0 0%, #b3e6ff 100%);
+            background: url('beach.png') no-repeat center center fixed;
+            background-size: cover;
             font-family: 'Segoe UI', Arial, sans-serif;
             color: #234;
             max-width: 600px;
@@ -18,6 +19,7 @@
         h1 {
             text-align: center;
             color: #1a7f37;
+            text-shadow: 2px 2px 0 #000, 0 0 4px #000;
         }
         #game {
             margin-top: 2em;
@@ -32,14 +34,30 @@
             color: #fff;
             cursor: pointer;
             transition: background 0.2s;
+            text-shadow: 1px 1px 2px #000;
         }
         .choices button:hover {
             background: #145c27;
         }
+        /* Outline any green text in black for readability */
+        .green-outline, .choices button, h1 {
+            text-shadow: 2px 2px 0 #000, 0 0 4px #000;
+        }
+        /* For any inline green text, use <span class="green-outline">text</span> */
         #inventory {
             margin-top: 1em;
             font-size: 0.95em;
             color: #555;
+        }
+        #murloc-pixel {
+            position: fixed;
+            left: -400px; /* Move even further left off the visible edge */
+            bottom: 18px;
+            width: 1600px; /* 80px * 20 = 1600px for 2000% bigger */
+            height: auto;
+            z-index: 10;
+            image-rendering: pixelated;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -48,6 +66,7 @@
     <h1>Murloc's Stranglethorn Adventure</h1>
     <div id="game"></div>
     <div id="inventory"></div>
+    <img id="murloc-pixel" src="murlocpxl.png" alt="Murloc Pixel Art">
     <script>
         // Game state
         let player = {
@@ -149,7 +168,7 @@
         }
 
         function show(text, choices) {
-            gameDiv.innerHTML = `<div>${text}</div><div style='margin-top:0.5em;color:#2a5;font-size:0.95em;'>${formatTime()}</div>`;
+            gameDiv.innerHTML = `<div style='color:#fff;font-weight:bold;font-size:1.13em;text-shadow:2px 2px 6px #000,0 0 10px #000;'>${text}</div><div style='margin-top:0.5em;color:#fff;text-shadow:1px 1px 3px #000;font-size:0.95em;'>${formatTime()}</div>`;
             if (choices) {
                 let btns = choices.map((c, i) => `<button onclick="window.choice(${i})">${c}</button>`).join('<br>');
                 gameDiv.innerHTML += `<div class='choices'>${btns}</div>`;
@@ -165,15 +184,16 @@
                 'Magical Conch', 'Ancient Idol', 'Magical Island Treasure', 'Parrot Clue', 'Rare Artifact'
             ];
             let inventoryList = allItems
-                .map(item => player.inventory.includes(item) ? `<li>${item}</li>` : null)
+                .map(item => player.inventory.includes(item) ? `<li style='color:#fff;font-weight:bold;font-size:1.08em;text-shadow:2px 2px 6px #000,0 0 10px #000;'>${item}</li>` : null)
                 .filter(Boolean)
                 .join('');
-            if (!inventoryList) inventoryList = '<li>(empty)</li>';
-            let weaponInfo = `<b>Weapon:</b> ${playerWeapon.name} (+${playerWeapon.damage} dmg)`;
-            let moneyInfo = `<b>Money:</b> ${playerMoney}g`;
-            let potions = playerPotions.length ? playerPotions.map(p => `${p.name} (+${p.heal} HP)`).join(', ') : '(none)';
-            let levelInfo = `<b>Level:</b> ${player.level} (XP: ${player.xp}/${player.xpToNext})`;
-            inventoryDiv.innerHTML = `${moneyInfo}<br>${weaponInfo}<br>${levelInfo}<br><b>Potions:</b> ${potions}<br><b>HP:</b> ${player.hp}/${player.maxHp}<br><b>Inventory:</b><ul>${inventoryList}</ul>`;
+            if (!inventoryList) inventoryList = '<li style="color:#fff;font-weight:bold;font-size:1.08em;text-shadow:2px 2px 6px #000,0 0 10px #000;">(empty)</li>';
+            let weaponInfo = `<b style="color:#ffe066;text-shadow:2px 2px 4px #000,0 0 8px #000;">Weapon:</b> <span style="color:#fff176;text-shadow:2px 2px 4px #000,0 0 8px #000;">${playerWeapon.name} (+${playerWeapon.damage} dmg)</span>`;
+            let moneyInfo = `<b style="color:#ffd700;text-shadow:2px 2px 4px #000,0 0 8px #000;">Money:</b> <span style="color:#fff;text-shadow:2px 2px 4px #000,0 0 8px #000;">${playerMoney}g</span>`;
+            let potions = playerPotions.length ? playerPotions.map(p => `<span style='color:#b2ff59;text-shadow:2px 2px 4px #000,0 0 8px #000;'>${p.name} (+${p.heal} HP)</span>`).join(', ') : '<span style="color:#fff;text-shadow:2px 2px 4px #000,0 0 8px #000;">(none)</span>';
+            let levelInfo = `<b style="color:#40c4ff;text-shadow:2px 2px 4px #000,0 0 8px #000;">Level:</b> <span style="color:#fff;text-shadow:2px 2px 4px #000,0 0 8px #000;">${player.level} (XP: ${player.xp}/${player.xpToNext})</span>`;
+            let hpInfo = `<b style="color:#ff5252;text-shadow:2px 2px 4px #000,0 0 8px #000;">HP:</b> <span style="color:#fff;text-shadow:2px 2px 4px #000,0 0 8px #000;">${player.hp}/${player.maxHp}</span>`;
+            inventoryDiv.innerHTML = `${moneyInfo}<br>${weaponInfo}<br>${levelInfo}<br><b style="color:#b2ff59;text-shadow:2px 2px 4px #000,0 0 8px #000;">Potions:</b> ${potions}<br>${hpInfo}<br><b style="color:#fff;text-shadow:2px 2px 4px #000,0 0 8px #000;">Inventory:</b><ul>${inventoryList}</ul>`;
         }
 
         function selectLevel() {
@@ -192,18 +212,21 @@
             }
         }
 
+        // Update mainMenu to add Save/Load buttons
         function mainMenu() {
             show(`What will you do?`, [
                 'Explore the coast',
                 'Check inventory',
                 `Rest (${Math.min(restUses + 1, 2)}/2)`,
                 'Visit Shopkeeper',
+                'Save Game',
+                'Load Game',
                 'End adventure'
             ]);
             window.choice = function(i) {
                 advanceTime();
                 if (i === 0) {
-                    selectLevel(); // Now select level after choosing to explore
+                    selectLevel();
                 } else if (i === 1) {
                     show(`<b>Inventory:</b> ${player.inventory.length ? player.inventory.join(', ') : '(empty)'}`, ['Back']);
                     window.choice = () => { advanceTime(); mainMenu(); };
@@ -219,6 +242,20 @@
                     }
                 } else if (i === 3) {
                     shopkeeper();
+                } else if (i === 4) {
+                    // Save slot selection
+                    show('Choose a save slot:', ['Slot 1', 'Slot 2', 'Slot 3', 'Slot 4', 'Slot 5', 'Back']);
+                    window.choice = function(slot) {
+                        if (slot === 5) { mainMenu(); return; }
+                        saveGame(slot + 1);
+                    };
+                } else if (i === 5) {
+                    // Load slot selection
+                    show('Choose a load slot:', ['Slot 1', 'Slot 2', 'Slot 3', 'Slot 4', 'Slot 5', 'Back']);
+                    window.choice = function(slot) {
+                        if (slot === 5) { mainMenu(); return; }
+                        loadGame(slot + 1);
+                    };
                 } else {
                     show('Thanks for playing!', ['Start New Game']);
                     window.choice = function(j) {
@@ -234,6 +271,7 @@
                             days = 1;
                             hours = 8;
                             restUses = 0;
+                            document.getElementById('murloc-pixel').src = 'murlocpxl.png';
                             intro();
                         }
                     }
@@ -271,6 +309,10 @@
                         } else if (item.type === 'fun') {
                             player.inventory.push(item.name);
                             show(`You bought a ${item.name}!`, ['Continue']);
+                            if (item.name === 'Pirate Hat') {
+                                // Change the Murloc image to pirate version
+                                document.getElementById('murloc-pixel').src = 'piratemurloc.png';
+                            }
                         }
                     } else {
                         show('Not enough gold!', ['Continue']);
@@ -385,6 +427,44 @@
                 }
             }
             combatRound();
+        }
+
+        function saveGame(slot = 1) {
+            const saveData = {
+                player,
+                playerMoney,
+                playerWeapon,
+                playerPotions,
+                days,
+                hours,
+                restUses,
+                currentLevel,
+                murlocSrc: document.getElementById('murloc-pixel').src
+            };
+            localStorage.setItem('murlocSave' + slot, JSON.stringify(saveData));
+            show(`Game saved to slot ${slot}!`, ['Continue']);
+            window.choice = () => mainMenu();
+        }
+
+        function loadGame(slot = 1) {
+            const data = localStorage.getItem('murlocSave' + slot);
+            if (!data) {
+                show(`No save file found in slot ${slot}.`, ['Continue']);
+                window.choice = () => mainMenu();
+                return;
+            }
+            const saveData = JSON.parse(data);
+            Object.assign(player, saveData.player);
+            playerMoney = saveData.playerMoney;
+            playerWeapon = saveData.playerWeapon;
+            playerPotions = saveData.playerPotions;
+            days = saveData.days;
+            hours = saveData.hours;
+            restUses = saveData.restUses;
+            currentLevel = saveData.currentLevel;
+            document.getElementById('murloc-pixel').src = saveData.murlocSrc || 'murlocpxl.png';
+            show(`Game loaded from slot ${slot}!`, ['Continue']);
+            window.choice = () => mainMenu();
         }
 
         intro();
