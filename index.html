@@ -59,6 +59,54 @@
             image-rendering: pixelated;
             pointer-events: none;
         }
+        /* Make Lich King Murloc 200% smaller */
+        #lich-king-murloc {
+            width: 800px !important;
+            position: fixed !important;
+            left: 0 !important;
+            right: auto !important;
+            bottom: 0 !important;
+            top: auto !important;
+            z-index: 1; /* Lower z-index so it's behind the dialogue box/UI */
+            image-rendering: pixelated;
+            pointer-events: none;
+        }
+        /* Developer chat box styles */
+        #dev-chat-box {
+            position: fixed;
+            bottom: 18px;
+            right: 18px;
+            z-index: 9999;
+            background: rgba(30, 30, 30, 0.55); /* More transparent */
+            padding: 4px 8px 4px 6px;
+            border-radius: 8px;
+            box-shadow: 0 1px 6px #0006;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.92em;
+        }
+        #dev-chat-input {
+            padding: 2px 6px;
+            border-radius: 5px;
+            border: none;
+            font-size: 0.95em;
+            outline: none;
+            min-width: 70px;
+            max-width: 110px;
+            height: 22px;
+        }
+        #dev-chat-btn {
+            background: #ffd700;
+            color: #222;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            padding: 2px 8px;
+            font-size: 0.95em;
+            height: 26px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -151,6 +199,15 @@
             }
         ];
         let currentLevel = 0;
+
+        // Define level-specific collectible items
+        const levelItems = [
+            ['Shiny Shell', 'Sand Dollar', 'Coral Fragment'], // Stranglethorn Beach
+            ['Jungle Feather', 'Raptor Claw', 'Exotic Flower'], // Jungle Interior
+            ['Naga Scale', 'Basilisk Eye', 'Ancient Coin'], // Ruins of Zul
+            ['Pirate Doubloon', 'Cursed Pearl', 'Sunken Relic'], // Pirate Cove
+            ["Zul'Gurub Idol", 'Temple Gem', 'Spirit Charm'] // Zul’Gurub Temple
+        ];
 
         function advanceTime() {
             hours += 1;
@@ -272,6 +329,7 @@
                             hours = 8;
                             restUses = 0;
                             document.getElementById('murloc-pixel').src = 'murlocpxl.png';
+                            document.getElementById('murloc-pixel').id = 'murloc-pixel';
                             intro();
                         }
                     }
@@ -290,8 +348,13 @@
                 }
                 if (item.type === 'fun') return `${item.name} (Just for fun!) - ${item.price}g`;
             });
-            let sellable = player.inventory.length ? player.inventory.map((item, idx) => `Sell ${item}`) : [];
+            let sellable = player.inventory.length ? player.inventory.filter(item => item !== 'Pirate Hat' && item !== 'Parrot Pet').map((item, idx) => `Sell ${item}`) : [];
             let options = [...shopList, ...sellable, 'Back'];
+            // Check if all non-potion shop items have been bought (none left except potions)
+            const nonPotionItemsLeft = shopItems.some(item => item.type !== 'potion');
+            if (!nonPotionItemsLeft && !player.inventory.includes('Frostmourne')) {
+                options.splice(options.length - 1, 0, 'Claim Frostmourne');
+            }
             show('Welcome to the Shopkeeper! What would you like to buy or sell?', options);
             window.choice = function(i) {
                 advanceTime();
@@ -300,9 +363,15 @@
                     if (playerMoney >= item.price) {
                         playerMoney -= item.price;
                         if (item.type === 'weapon') {
-                            playerWeapon = item;
-                            shopItems.splice(i, 1); // Remove weapon from shop after purchase
-                            show(`You bought the ${item.name}!`, ['Continue']);
+                            // Always remove weapon from shop after purchase
+                            shopItems.splice(i, 1);
+                            // If the purchased weapon is stronger, equip it
+                            if (item.damage > playerWeapon.damage) {
+                                playerWeapon = item;
+                                show(`You bought the ${item.name}! It is now your equipped weapon.`, ['Continue']);
+                            } else {
+                                show(`You bought the ${item.name}, but your current weapon is stronger. You keep your current weapon.`, ['Continue']);
+                            }
                         } else if (item.type === 'potion') {
                             playerPotions.push(item);
                             show(`You bought a ${item.name}!`, ['Continue']);
@@ -310,20 +379,42 @@
                             player.inventory.push(item.name);
                             show(`You bought a ${item.name}!`, ['Continue']);
                             if (item.name === 'Pirate Hat') {
-                                // Change the Murloc image to pirate version
                                 document.getElementById('murloc-pixel').src = 'piratemurloc.png';
                             }
+                            // Remove fun item from shop after purchase (except potions)
+                            shopItems.splice(i, 1);
                         }
                     } else {
                         show('Not enough gold!', ['Continue']);
                     }
                     window.choice = () => { advanceTime(); shopkeeper(); };
+                } else if (!nonPotionItemsLeft && !player.inventory.includes('Frostmourne') && i === options.indexOf('Claim Frostmourne')) {
+                    // Grant Frostmourne
+                    const frostmourne = { name: 'Frostmourne', type: 'weapon', damage: 99, invulnerable: true };
+                    playerWeapon = frostmourne;
+                    player.inventory.push('Frostmourne');
+                    document.getElementById('murloc-pixel').src = 'lich king murloc.png';
+                    document.getElementById('murloc-pixel').id = 'lich-king-murloc';
+                    show('You have claimed Frostmourne! Your attack is now +99 and you are invulnerable!', ['Continue']);
+                    window.choice = () => { advanceTime(); shopkeeper(); };
                 } else if (i < shopItems.length + sellable.length) {
                     let invIdx = i - shopItems.length;
-                    let itemName = player.inventory[invIdx];
-                    let value = Math.floor(Math.random() * 4) + 2; // 2-5g
+                    let itemName = player.inventory.filter(item => item !== 'Pirate Hat' && item !== 'Parrot Pet')[invIdx];
+                    // Determine item value based on which level it comes from
+                    let value = 2; // default
+                    for (let lvl = levelItems.length - 1; lvl >= 0; lvl--) {
+                        if (levelItems[lvl].includes(itemName)) {
+                            if (lvl === 4) {
+                                // Zul'Gurub Temple items are worth much more
+                                value = 40 + Math.floor(Math.random() * 21); // 40-60g
+                            } else {
+                                value = 3 + lvl * 3 + Math.floor(Math.random() * (2 + lvl));
+                            }
+                            break;
+                        }
+                    }
                     playerMoney += value;
-                    player.inventory.splice(invIdx, 1);
+                    player.inventory.splice(player.inventory.indexOf(itemName), 1);
                     show(`You sold ${itemName} for ${value}g!`, ['Continue']);
                     window.choice = () => { advanceTime(); shopkeeper(); };
                 } else {
@@ -336,14 +427,26 @@
         function explore() {
             advanceTime();
             let levelEnemies = gameLevels[currentLevel].enemies;
+            let items = levelItems[currentLevel];
             let events = [
-                () => { player.inventory.push('Shiny Shell'); show('You find a shiny shell on the beach. (Inventory +1)', ['Continue']); window.choice = () => mainMenu(); },
+                () => {
+                    // Find a random item from this level
+                    let found = items[Math.floor(Math.random() * items.length)];
+                    player.inventory.push(found);
+                    show(`You find a ${found}. (Inventory +1)`, ['Continue']);
+                    window.choice = () => mainMenu();
+                },
                 () => { combat(levelEnemies[Math.floor(Math.random() * levelEnemies.length)]); },
-                () => { player.inventory.push('Gold Coin'); show('You discover a hidden chest. (Inventory +1)', ['Continue']); window.choice = () => mainMenu(); },
+                () => {
+                    // Find a random item from this level (higher chance for gold at higher levels)
+                    let found = items[Math.floor(Math.random() * items.length)];
+                    player.inventory.push(found);
+                    show(`You discover a hidden ${found}. (Inventory +1)`, ['Continue']);
+                    window.choice = () => mainMenu();
+                },
                 () => { combat(levelEnemies[Math.floor(Math.random() * levelEnemies.length)]); },
                 () => { player.hp = Math.min(player.hp + 2, player.maxHp); show('You rest under a palm tree and recover 2 HP. (HP +2)', ['Continue']); window.choice = () => mainMenu(); }
             ];
-            // Add more events as desired...
             let event = events[Math.floor(Math.random() * events.length)];
             event();
         }
@@ -381,8 +484,11 @@
                         enemyHp -= dmg;
                         let msg = `You hit the ${enemy.name} for ${dmg} damage!`;
                         if (enemyHp <= 0) {
-                            let goldReward = Math.floor(Math.random() * 7) + 2; // 2-8g
-                            let xpReward = Math.floor(enemy.hp + enemy.attack + Math.random() * 3); // XP based on enemy
+                            // Gold reward by level: 2-3g (L1), 4-6g (L2), 7-9g (L3), 10-12g (L4), 13-15g (L5)
+                            let goldRanges = [ [2,3], [4,6], [7,9], [10,12], [13,15] ];
+                            let range = goldRanges[Math.min(currentLevel, goldRanges.length-1)];
+                            let goldReward = Math.floor(Math.random() * (range[1] - range[0] + 1)) + range[0];
+                            let xpReward = Math.floor(enemy.hp + enemy.attack + Math.random() * 3);
                             playerMoney += goldReward;
                             let leveled = gainXP(xpReward);
                             let rewardMsg = `${msg}<br>You defeated the ${enemy.name}!<br>You found ${goldReward} gold and gained ${xpReward} XP!`;
@@ -393,6 +499,10 @@
                             return;
                         }
                         let enemyDmg = Math.floor(Math.random() * 3) + (enemy.attack - 1);
+                        // If Frostmourne is equipped, make player invulnerable
+                        if (playerWeapon && playerWeapon.name === 'Frostmourne' && playerWeapon.invulnerable) {
+                            enemyDmg = 0;
+                        }
                         player.hp -= enemyDmg;
                         msg += `<br>The ${enemy.name} hits you for ${enemyDmg} damage!`;
                         if (player.hp <= 0) {
@@ -408,6 +518,9 @@
                             window.choice = () => mainMenu();
                         } else {
                             let enemyDmg = Math.floor(Math.random() * 3) + (enemy.attack - 1);
+                            if (playerWeapon && playerWeapon.name === 'Frostmourne' && playerWeapon.invulnerable) {
+                                enemyDmg = 0;
+                            }
                             player.hp -= enemyDmg;
                             let msg = `You failed to escape!<br>The ${enemy.name} hits you for ${enemyDmg} damage!`;
                             if (player.hp <= 0) {
@@ -463,11 +576,38 @@
             restUses = saveData.restUses;
             currentLevel = saveData.currentLevel;
             document.getElementById('murloc-pixel').src = saveData.murlocSrc || 'murlocpxl.png';
+            document.getElementById('murloc-pixel').id = 'murloc-pixel';
             show(`Game loaded from slot ${slot}!`, ['Continue']);
             window.choice = () => mainMenu();
         }
 
         intro();
+    </script>
+    <!-- Developer Cheat Chat Box -->
+    <div id="dev-chat-box" style="position:fixed;bottom:24px;right:24px;z-index:9999;background:rgba(30,30,30,0.92);padding:10px 14px 10px 10px;border-radius:12px;box-shadow:0 2px 12px #0008;display:flex;align-items:center;gap:6px;">
+      <input id="dev-chat-input" type="text" placeholder="Dev chat..." style="padding:6px 10px;border-radius:6px;border:none;font-size:1em;outline:none;min-width:120px;max-width:180px;">
+      <button id="dev-chat-btn" style="background:#ffd700;color:#222;font-weight:bold;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;">Send</button>
+    </div>
+    <script>
+    // Developer Cheat Chat Box logic
+    (function(){
+      const chatBox = document.getElementById('dev-chat-box');
+      const chatInput = document.getElementById('dev-chat-input');
+      const chatBtn = document.getElementById('dev-chat-btn');
+      function handleDevChat() {
+        const val = chatInput.value.trim();
+        if (val === 'Pot of Gold') {
+          playerMoney += 9999;
+          show('A mysterious force grants you 9999 gold!',['Thanks']);
+          window.choice = () => mainMenu();
+        }
+        chatInput.value = '';
+      }
+      chatBtn.onclick = handleDevChat;
+      chatInput.addEventListener('keydown', function(e){
+        if (e.key === 'Enter') handleDevChat();
+      });
+    })();
     </script>
 </body>
 </html>
