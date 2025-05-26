@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Murloc's Stranglethorn Adventure</title>
+    <style>
+        body {
+            background: linear-gradient(to bottom, #e0ffe0 0%, #b3e6ff 100%);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #234;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 2em;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+        }
+        h1 {
+            text-align: center;
+            color: #1a7f37;
+        }
+        #game {
+            margin-top: 2em;
+        }
+        .choices button {
+            margin: 0.5em 0;
+            padding: 0.7em 1.5em;
+            font-size: 1em;
+            border-radius: 8px;
+            border: none;
+            background: #1a7f37;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .choices button:hover {
+            background: #145c27;
+        }
+        #inventory {
+            margin-top: 1em;
+            font-size: 0.95em;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <noscript><div style="color:red;text-align:center;font-size:1.2em;">JavaScript is required to play this game. Please enable JavaScript in your browser.</div></noscript>
+    <h1>Murloc's Stranglethorn Adventure</h1>
+    <div id="game"></div>
+    <div id="inventory"></div>
+    <script>
+        // Game state
+        let player = {
+            hp: 12,
+            maxHp: 12,
+            attack: 3,
+            inventory: [],
+            level: 1,
+            xp: 0,
+            xpToNext: 10
+        };
+        let gameDiv = document.getElementById('game');
+        let inventoryDiv = document.getElementById('inventory');
+
+        let shopItems = [
+            { name: 'Rusty Spear', type: 'weapon', price: 8, damage: 2 },
+            { name: 'Sharp Trident', type: 'weapon', price: 15, damage: 4 },
+            { name: 'Coral Blade', type: 'weapon', price: 28, damage: 7 },
+            { name: 'Pearl Warhammer', type: 'weapon', price: 45, damage: 11 },
+            { name: "Tidecaller's Pike", type: 'weapon', price: 70, damage: 16 },
+            { name: 'Sunken Cutlass', type: 'weapon', price: 100, damage: 20 },
+            { name: 'Stormforged Axe', type: 'weapon', price: 150, damage: 28 },
+            { name: 'Ancient Trident', type: 'weapon', price: 220, damage: 40 },
+            { name: "Zul'Gurub Relic Blade", type: 'weapon', price: 350, damage: 60 },
+            { name: 'Healing Potion', type: 'potion', price: 5, heal: 6 },
+            { name: 'Mega Healing Potion', type: 'potion', price: 12, heal: 15 },
+            { name: 'Elixir of Fury', type: 'potion', price: 18, fury: true },
+            { name: 'Potion of Escape', type: 'potion', price: 10, escape: true },
+            { name: 'Mystic Brew', type: 'potion', price: 8, random: true },
+            { name: 'Parrot Pet', type: 'fun', price: 5 },
+            { name: 'Pirate Hat', type: 'fun', price: 12 }
+        ];
+        let playerMoney = 10;
+        let playerWeapon = { name: 'Claws', damage: 0 };
+        let playerPotions = [];
+
+        let days = 1;
+        let hours = 8; // Start at 8 AM for flavor
+        let restUses = 0;
+
+        // Define game levels and their enemies
+        const gameLevels = [
+            {
+                name: 'Stranglethorn Beach',
+                enemies: [
+                    { name: 'Jungle Panther', hp: 8, attack: 3 },
+                    { name: 'Giant Crab', hp: 10, attack: 2 },
+                    { name: 'Vicious Monkey', hp: 7, attack: 2 }
+                ]
+            },
+            {
+                name: 'Jungle Interior',
+                enemies: [
+                    { name: 'Stranglethorn Raptor', hp: 12, attack: 4 },
+                    { name: 'Savage Crocolisk', hp: 13, attack: 4 },
+                    { name: 'Stranglethorn Tiger', hp: 14, attack: 5 }
+                ]
+            },
+            {
+                name: 'Ruins of Zul',
+                enemies: [
+                    { name: 'Mysterious Naga', hp: 16, attack: 6 },
+                    { name: 'Jungle Basilisk', hp: 11, attack: 3 },
+                    { name: 'Troll Champion', hp: 18, attack: 7 }
+                ]
+            },
+            {
+                name: 'Pirate Cove',
+                enemies: [
+                    { name: 'Pirate Captain', hp: 20, attack: 8 },
+                    { name: 'Cursed Parrot', hp: 15, attack: 6 },
+                    { name: 'Sunken Revenant', hp: 22, attack: 9 }
+                ]
+            },
+            {
+                name: 'Zul’Gurub Temple',
+                enemies: [
+                    { name: 'Zul’Gurub High Priest', hp: 28, attack: 12 },
+                    { name: 'Ancient Idol Guardian', hp: 25, attack: 10 },
+                    { name: 'Zul’Gurub Relic Spirit', hp: 32, attack: 14 }
+                ]
+            }
+        ];
+        let currentLevel = 0;
+
+        function advanceTime() {
+            hours += 1;
+            if (hours >= 24) {
+                hours = 0;
+                days += 1;
+                restUses = 0;
+            }
+        }
+
+        function formatTime() {
+            let displayHour = hours % 12 === 0 ? 12 : hours % 12;
+            let ampm = hours < 12 ? 'AM' : 'PM';
+            return `Day ${days}, ${displayHour}:00 ${ampm}`;
+        }
+
+        function show(text, choices) {
+            gameDiv.innerHTML = `<div>${text}</div><div style='margin-top:0.5em;color:#2a5;font-size:0.95em;'>${formatTime()}</div>`;
+            if (choices) {
+                let btns = choices.map((c, i) => `<button onclick="window.choice(${i})">${c}</button>`).join('<br>');
+                gameDiv.innerHTML += `<div class='choices'>${btns}</div>`;
+            }
+            updateInventory();
+        }
+
+        function updateInventory() {
+            // List all possible items
+            const allItems = [
+                'Shiny Shell', 'Gold Coin', 'Pearl Necklace', 'Mysterious Map', 'Good Luck Charm',
+                'Pirate Gold', 'Message in a Bottle', 'Lagoon Map', 'Rare Gemstone', 'Secret Word: Zul',
+                'Magical Conch', 'Ancient Idol', 'Magical Island Treasure', 'Parrot Clue', 'Rare Artifact'
+            ];
+            let inventoryList = allItems
+                .map(item => player.inventory.includes(item) ? `<li>${item}</li>` : null)
+                .filter(Boolean)
+                .join('');
+            if (!inventoryList) inventoryList = '<li>(empty)</li>';
+            let weaponInfo = `<b>Weapon:</b> ${playerWeapon.name} (+${playerWeapon.damage} dmg)`;
+            let moneyInfo = `<b>Money:</b> ${playerMoney}g`;
+            let potions = playerPotions.length ? playerPotions.map(p => `${p.name} (+${p.heal} HP)`).join(', ') : '(none)';
+            let levelInfo = `<b>Level:</b> ${player.level} (XP: ${player.xp}/${player.xpToNext})`;
+            inventoryDiv.innerHTML = `${moneyInfo}<br>${weaponInfo}<br>${levelInfo}<br><b>Potions:</b> ${potions}<br><b>HP:</b> ${player.hp}/${player.maxHp}<br><b>Inventory:</b><ul>${inventoryList}</ul>`;
+        }
+
+        function selectLevel() {
+            let levelOptions = gameLevels.map(lvl => lvl.name);
+            show('Choose your adventure location:', levelOptions);
+            window.choice = function(i) {
+                currentLevel = i;
+                explore();
+            }
+        }
+
+        function intro() {
+            show(`You are a brave Murloc exploring the tropical coast of Stranglethorn.<br>Face wild beasts, discover treasures, and make choices that shape your journey!`, ['Start Adventure']);
+            window.choice = function(i) {
+                mainMenu();
+            }
+        }
+
+        function mainMenu() {
+            show(`What will you do?`, [
+                'Explore the coast',
+                'Check inventory',
+                `Rest (${Math.min(restUses + 1, 2)}/2)`,
+                'Visit Shopkeeper',
+                'End adventure'
+            ]);
+            window.choice = function(i) {
+                advanceTime();
+                if (i === 0) {
+                    selectLevel(); // Now select level after choosing to explore
+                } else if (i === 1) {
+                    show(`<b>Inventory:</b> ${player.inventory.length ? player.inventory.join(', ') : '(empty)'}`, ['Back']);
+                    window.choice = () => { advanceTime(); mainMenu(); };
+                } else if (i === 2) {
+                    if (restUses < 2) {
+                        restUses++;
+                        player.hp = Math.min(player.hp + 3, player.maxHp);
+                        show(`You rest and recover 3 HP. (${restUses}/2 rests used today)`, ['Continue']);
+                        window.choice = () => { advanceTime(); mainMenu(); };
+                    } else {
+                        show('You are too restless to nap again today! (2/2 rests used)', ['Continue']);
+                        window.choice = () => mainMenu();
+                    }
+                } else if (i === 3) {
+                    shopkeeper();
+                } else {
+                    show('Thanks for playing!', ['Start New Game']);
+                    window.choice = function(j) {
+                        if (j === 0) {
+                            // Reset all player state
+                            player.hp = 12;
+                            player.maxHp = 12;
+                            player.attack = 3;
+                            player.inventory = [];
+                            playerMoney = 10;
+                            playerWeapon = { name: 'Claws', damage: 0 };
+                            playerPotions = [];
+                            days = 1;
+                            hours = 8;
+                            restUses = 0;
+                            intro();
+                        }
+                    }
+                }
+            }
+        }
+
+        function shopkeeper() {
+            let shopList = shopItems.map((item, idx) => {
+                if (item.type === 'weapon') return `${item.name} (+${item.damage} dmg) - ${item.price}g`;
+                if (item.type === 'potion') {
+                    if (item.heal) return `${item.name} (+${item.heal} HP) - ${item.price}g`;
+                    if (item.fury) return `${item.name} (Double damage next fight) - ${item.price}g`;
+                    if (item.escape) return `${item.name} (Guaranteed escape) - ${item.price}g`;
+                    if (item.random) return `${item.name} (Random effect) - ${item.price}g`;
+                }
+                if (item.type === 'fun') return `${item.name} (Just for fun!) - ${item.price}g`;
+            });
+            let sellable = player.inventory.length ? player.inventory.map((item, idx) => `Sell ${item}`) : [];
+            let options = [...shopList, ...sellable, 'Back'];
+            show('Welcome to the Shopkeeper! What would you like to buy or sell?', options);
+            window.choice = function(i) {
+                advanceTime();
+                if (i < shopItems.length) {
+                    let item = shopItems[i];
+                    if (playerMoney >= item.price) {
+                        playerMoney -= item.price;
+                        if (item.type === 'weapon') {
+                            playerWeapon = item;
+                            shopItems.splice(i, 1); // Remove weapon from shop after purchase
+                            show(`You bought the ${item.name}!`, ['Continue']);
+                        } else if (item.type === 'potion') {
+                            playerPotions.push(item);
+                            show(`You bought a ${item.name}!`, ['Continue']);
+                        } else if (item.type === 'fun') {
+                            player.inventory.push(item.name);
+                            show(`You bought a ${item.name}!`, ['Continue']);
+                        }
+                    } else {
+                        show('Not enough gold!', ['Continue']);
+                    }
+                    window.choice = () => { advanceTime(); shopkeeper(); };
+                } else if (i < shopItems.length + sellable.length) {
+                    let invIdx = i - shopItems.length;
+                    let itemName = player.inventory[invIdx];
+                    let value = Math.floor(Math.random() * 4) + 2; // 2-5g
+                    playerMoney += value;
+                    player.inventory.splice(invIdx, 1);
+                    show(`You sold ${itemName} for ${value}g!`, ['Continue']);
+                    window.choice = () => { advanceTime(); shopkeeper(); };
+                } else {
+                    mainMenu();
+                }
+            }
+        }
+
+        // Update explore to use current level's enemies
+        function explore() {
+            advanceTime();
+            let levelEnemies = gameLevels[currentLevel].enemies;
+            let events = [
+                () => { player.inventory.push('Shiny Shell'); show('You find a shiny shell on the beach. (Inventory +1)', ['Continue']); window.choice = () => mainMenu(); },
+                () => { combat(levelEnemies[Math.floor(Math.random() * levelEnemies.length)]); },
+                () => { player.inventory.push('Gold Coin'); show('You discover a hidden chest. (Inventory +1)', ['Continue']); window.choice = () => mainMenu(); },
+                () => { combat(levelEnemies[Math.floor(Math.random() * levelEnemies.length)]); },
+                () => { player.hp = Math.min(player.hp + 2, player.maxHp); show('You rest under a palm tree and recover 2 HP. (HP +2)', ['Continue']); window.choice = () => mainMenu(); }
+            ];
+            // Add more events as desired...
+            let event = events[Math.floor(Math.random() * events.length)];
+            event();
+        }
+
+        function gainXP(amount) {
+            player.xp += amount;
+            let leveledUp = false;
+            while (player.xp >= player.xpToNext) {
+                player.xp -= player.xpToNext;
+                player.level++;
+                player.maxHp += 2;
+                player.attack++;
+                player.hp = player.maxHp;
+                player.xpToNext = Math.floor(player.xpToNext * 1.5);
+                leveledUp = true;
+            }
+            if (leveledUp) {
+                show(`You leveled up! You are now level ${player.level}.<br>Max HP increased to ${player.maxHp}, Attack increased to ${player.attack}.`, ['Continue']);
+                window.choice = () => mainMenu();
+                return true;
+            }
+            return false;
+        }
+
+        function combat(enemy) {
+            let enemyHp = enemy.hp;
+            function combatRound() {
+                let potionOption = playerPotions.length ? [`Use Potion (${playerPotions.length})`] : [];
+                show(`A wild ${enemy.name} appears!<br>Your HP: ${player.hp} | ${enemy.name} HP: ${enemyHp}`, [
+                    'Attack', 'Run', ...potionOption
+                ]);
+                window.choice = function(i) {
+                    if (i === 0) {
+                        let dmg = Math.floor(Math.random() * 4) + (player.attack - 1) + playerWeapon.damage;
+                        enemyHp -= dmg;
+                        let msg = `You hit the ${enemy.name} for ${dmg} damage!`;
+                        if (enemyHp <= 0) {
+                            let goldReward = Math.floor(Math.random() * 7) + 2; // 2-8g
+                            let xpReward = Math.floor(enemy.hp + enemy.attack + Math.random() * 3); // XP based on enemy
+                            playerMoney += goldReward;
+                            let leveled = gainXP(xpReward);
+                            let rewardMsg = `${msg}<br>You defeated the ${enemy.name}!<br>You found ${goldReward} gold and gained ${xpReward} XP!`;
+                            if (!leveled) {
+                                show(rewardMsg, ['Continue']);
+                                window.choice = () => mainMenu();
+                            }
+                            return;
+                        }
+                        let enemyDmg = Math.floor(Math.random() * 3) + (enemy.attack - 1);
+                        player.hp -= enemyDmg;
+                        msg += `<br>The ${enemy.name} hits you for ${enemyDmg} damage!`;
+                        if (player.hp <= 0) {
+                            show(`${msg}<br>You have been defeated...`, ['Restart']);
+                            window.choice = () => { player.hp = player.maxHp; player.inventory = []; playerMoney = 10; intro(); };
+                            return;
+                        }
+                        show(msg, ['Continue']);
+                        window.choice = () => combatRound();
+                    } else if (i === 1) {
+                        if (Math.random() < 0.5) {
+                            show('You escaped!', ['Continue']);
+                            window.choice = () => mainMenu();
+                        } else {
+                            let enemyDmg = Math.floor(Math.random() * 3) + (enemy.attack - 1);
+                            player.hp -= enemyDmg;
+                            let msg = `You failed to escape!<br>The ${enemy.name} hits you for ${enemyDmg} damage!`;
+                            if (player.hp <= 0) {
+                                show(`${msg}<br>You have been defeated...`, ['Restart']);
+                                window.choice = () => { player.hp = player.maxHp; player.inventory = []; playerMoney = 10; intro(); };
+                                return;
+                            }
+                            show(msg, ['Continue']);
+                            window.choice = () => combatRound();
+                        }
+                    } else if (i === 2 && playerPotions.length) {
+                        let potion = playerPotions.shift();
+                        player.hp = Math.min(player.hp + potion.heal, player.maxHp);
+                        show(`You use a ${potion.name} and heal for ${potion.heal} HP!`, ['Continue']);
+                        window.choice = () => combatRound();
+                    }
+                }
+            }
+            combatRound();
+        }
+
+        intro();
+    </script>
+</body>
+</html>
