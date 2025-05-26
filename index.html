@@ -59,7 +59,7 @@
             image-rendering: pixelated;
             pointer-events: none;
         }
-        /* Make Lich King Murloc 200% smaller */
+        /* Make Lich King Murloc 200% smaller and behind all UI */
         #lich-king-murloc {
             width: 800px !important;
             position: fixed !important;
@@ -67,7 +67,7 @@
             right: auto !important;
             bottom: 0 !important;
             top: auto !important;
-            z-index: 1; /* Lower z-index so it's behind the dialogue box/UI */
+            z-index: -1 !important; /* Behind all UI, above only the background */
             image-rendering: pixelated;
             pointer-events: none;
         }
